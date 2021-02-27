@@ -64,8 +64,9 @@ class TestShippingQuery:
         assert shipping_query_dict['from'] == shipping_query.from_user.to_dict()
         assert shipping_query_dict['shipping_address'] == shipping_query.shipping_address.to_dict()
 
-    def test_answer(self, monkeypatch, shipping_query):
-        def make_assertion(*_, **kwargs):
+    @pytest.mark.asyncio
+    async def test_answer(self, monkeypatch, shipping_query):
+        async def make_assertion(*_, **kwargs):
             return kwargs['shipping_query_id'] == shipping_query.id
 
         assert check_shortcut_signature(
@@ -74,7 +75,7 @@ class TestShippingQuery:
         assert check_shortcut_call(
             shipping_query.answer, shipping_query.bot, 'answer_shipping_query'
         )
-        assert check_defaults_handling(shipping_query.answer, shipping_query.bot)
+        assert await check_defaults_handling(shipping_query.answer, shipping_query.bot)
 
         monkeypatch.setattr(shipping_query.bot, 'answer_shipping_query', make_assertion)
         assert shipping_query.answer(ok=True)

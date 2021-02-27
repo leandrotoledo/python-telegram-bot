@@ -104,7 +104,7 @@ class PassportFile(TelegramObject):
             for i, passport_file in enumerate(data)
         ]
 
-    def get_file(
+    async def get_file(
         self, timeout: ODVInput[float] = DEFAULT_NONE, api_kwargs: JSONDict = None
     ) -> 'File':
         """
@@ -121,6 +121,8 @@ class PassportFile(TelegramObject):
             :class:`telegram.error.TelegramError`
 
         """
-        file = self.bot.get_file(file_id=self.file_id, timeout=timeout, api_kwargs=api_kwargs)
+        file = await self.bot.get_file(
+            file_id=self.file_id, timeout=timeout, api_kwargs=api_kwargs
+        )
         file.set_credentials(self._credentials)
         return file

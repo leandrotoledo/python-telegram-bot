@@ -86,7 +86,7 @@ class ChatPhoto(TelegramObject):
             self.big_file_unique_id,
         )
 
-    def get_small_file(
+    async def get_small_file(
         self, timeout: ODVInput[float] = DEFAULT_NONE, api_kwargs: JSONDict = None
     ) -> 'File':
         """Convenience wrapper over :attr:`telegram.Bot.get_file` for getting the
@@ -101,11 +101,11 @@ class ChatPhoto(TelegramObject):
             :class:`telegram.error.TelegramError`
 
         """
-        return self.bot.get_file(
+        return await self.bot.get_file(
             file_id=self.small_file_id, timeout=timeout, api_kwargs=api_kwargs
         )
 
-    def get_big_file(
+    async def get_big_file(
         self, timeout: ODVInput[float] = DEFAULT_NONE, api_kwargs: JSONDict = None
     ) -> 'File':
         """Convenience wrapper over :attr:`telegram.Bot.get_file` for getting the
@@ -120,4 +120,6 @@ class ChatPhoto(TelegramObject):
             :class:`telegram.error.TelegramError`
 
         """
-        return self.bot.get_file(file_id=self.big_file_id, timeout=timeout, api_kwargs=api_kwargs)
+        return await self.bot.get_file(
+            file_id=self.big_file_id, timeout=timeout, api_kwargs=api_kwargs
+        )

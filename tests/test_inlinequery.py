@@ -68,25 +68,28 @@ class TestInlineQuery:
         assert inline_query_dict['query'] == inline_query.query
         assert inline_query_dict['offset'] == inline_query.offset
 
-    def test_answer(self, monkeypatch, inline_query):
-        def make_assertion(*_, **kwargs):
+    @pytest.mark.asyncio
+    async def test_answer(self, monkeypatch, inline_query):
+        async def make_assertion(*_, **kwargs):
             return kwargs['inline_query_id'] == inline_query.id
 
         assert check_shortcut_signature(
             InlineQuery.answer, Bot.answer_inline_query, ['inline_query_id'], ['auto_pagination']
         )
         assert check_shortcut_call(inline_query.answer, inline_query.bot, 'answer_inline_query')
-        assert check_defaults_handling(inline_query.answer, inline_query.bot)
+        assert await check_defaults_handling(inline_query.answer, inline_query.bot)
 
         monkeypatch.setattr(inline_query.bot, 'answer_inline_query', make_assertion)
         assert inline_query.answer(results=[])
 
-    def test_answer_error(self, inline_query):
+    @pytest.mark.asyncio
+    async def test_answer_error(self, inline_query):
         with pytest.raises(TypeError, match='mutually exclusive'):
-            inline_query.answer(results=[], auto_pagination=True, current_offset='foobar')
+            await inline_query.answer(results=[], auto_pagination=True, current_offset='foobar')
 
-    def test_answer_auto_pagination(self, monkeypatch, inline_query):
-        def make_assertion(*_, **kwargs):
+    @pytest.mark.asyncio
+    async def test_answer_auto_pagination(self, monkeypatch, inline_query):
+        async def make_assertion(*_, **kwargs):
             inline_query_id_matches = kwargs['inline_query_id'] == inline_query.id
             offset_matches = kwargs.get('current_offset') == inline_query.offset
             return offset_matches and inline_query_id_matches

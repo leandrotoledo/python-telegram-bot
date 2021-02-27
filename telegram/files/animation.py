@@ -105,7 +105,7 @@ class Animation(TelegramObject):
 
         return cls(bot=bot, **data)
 
-    def get_file(
+    async def get_file(
         self, timeout: ODVInput[float] = DEFAULT_NONE, api_kwargs: JSONDict = None
     ) -> 'File':
         """Convenience wrapper over :attr:`telegram.Bot.get_file`
@@ -119,4 +119,6 @@ class Animation(TelegramObject):
             :class:`telegram.error.TelegramError`
 
         """
-        return self.bot.get_file(file_id=self.file_id, timeout=timeout, api_kwargs=api_kwargs)
+        return await self.bot.get_file(
+            file_id=self.file_id, timeout=timeout, api_kwargs=api_kwargs
+        )

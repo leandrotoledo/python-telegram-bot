@@ -29,6 +29,6 @@ repos:
     rev: v2.10.0
     hooks:
     -   id: pyupgrade
-        files: ^(telegram|examples|tests)/.*\.py$
+        files: ^(telegram|examples|tests)/.*\.pyc$
         args:
             - --py36-plus

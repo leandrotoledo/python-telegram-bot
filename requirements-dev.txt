@@ -10,6 +10,7 @@ mypy==0.800
 pyupgrade==2.10.0
 
 pytest==6.2.2
+pytest-asyncio==0.14.0
 
 flaky
 beautifulsoup4

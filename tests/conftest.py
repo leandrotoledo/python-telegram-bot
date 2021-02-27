@@ -16,6 +16,7 @@
 #
 # You should have received a copy of the GNU Lesser Public License
 # along with this program.  If not, see [http://www.gnu.org/licenses/].
+import asyncio
 import datetime
 import functools
 import inspect
@@ -25,7 +26,7 @@ from collections import defaultdict
 from queue import Queue
 from threading import Thread, Event
 from time import sleep
-from typing import Callable, List, Iterable, Any
+from typing import Callable, List, Iterable, Any, Optional, Dict, Tuple
 
 import pytest
 import pytz
@@ -46,8 +47,10 @@ from telegram import (
     ChatPermissions,
 )
 from telegram.ext import Dispatcher, JobQueue, Updater, MessageFilter, Defaults, UpdateFilter
-from telegram.error import BadRequest
+from telegram.error import BadRequest, RetryAfter, TimedOut
 from telegram.utils.helpers import DefaultValue, DEFAULT_NONE
+from telegram.utils.request_httpx import PtbHttpx
+from telegram.utils.types import JSONDict
 from tests.bots import get_bot
 
 
@@ -76,43 +79,55 @@ def env_var_2_bool(env_var: object) -> bool:
     return env_var.lower().strip() == 'true'
 
 
+# Redefine the event_loop fixture to have a session scope. Otherwise `bot` fixture can't be
+# session. See https://github.com/pytest-dev/pytest-asyncio/issues/68 for more details.
+@pytest.fixture(scope='session')
+def event_loop(request):
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+    yield loop
+    loop.close()
+
+
 @pytest.fixture(scope='session')
 def bot_info():
     return get_bot()
 
 
 @pytest.fixture(scope='session')
-def bot(bot_info):
-    return make_bot(bot_info)
+async def bot(bot_info):
+    async with await make_bot(bot_info) as bot:
+        yield bot
 
 
 DEFAULT_BOTS = {}
 
 
 @pytest.fixture(scope='function')
-def default_bot(request, bot_info):
+async def default_bot(request, bot_info):
     param = request.param if hasattr(request, 'param') else {}
 
     defaults = Defaults(**param)
     default_bot = DEFAULT_BOTS.get(defaults)
     if default_bot:
-        return default_bot
+        yield default_bot
     else:
-        default_bot = make_bot(bot_info, **{'defaults': defaults})
+        default_bot = await make_bot(bot_info, **{'defaults': defaults})
+        await default_bot.do_init()
         DEFAULT_BOTS[defaults] = default_bot
-        return default_bot
+        yield default_bot
 
 
 @pytest.fixture(scope='function')
-def tz_bot(timezone, bot_info):
+async def tz_bot(timezone, bot_info):
     defaults = Defaults(tzinfo=timezone)
     default_bot = DEFAULT_BOTS.get(defaults)
     if default_bot:
-        return default_bot
+        yield default_bot
     else:
-        default_bot = make_bot(bot_info, **{'defaults': defaults})
+        default_bot = await make_bot(bot_info, **{'defaults': defaults})
+        await default_bot.do_init()
         DEFAULT_BOTS[defaults] = default_bot
-        return default_bot
+        yield default_bot
 
 
 @pytest.fixture(scope='session')
@@ -213,28 +228,50 @@ def pytest_configure(config):
     # TODO: Write so good code that we don't need to ignore ResourceWarnings anymore
 
 
-def make_bot(bot_info, **kwargs):
-    return Bot(bot_info['token'], private_key=PRIVATE_KEY, **kwargs)
+async def make_bot(bot_info, **kwargs):
+    bot = Bot(bot_info['token'], private_key=PRIVATE_KEY, **kwargs)
+    return bot
+
+
+class PtbTestHttpx(PtbHttpx):
+    async def _request_wrapper(
+        self,
+        method: str,
+        url: str,
+        data: Optional[JSONDict],
+        files: Dict[str, Tuple[str, bytes, str]],
+        read_timeout: float = None,
+    ) -> bytes:
+        try:
+            return await super()._request_wrapper(method, url, data, files, read_timeout)
+        except RetryAfter as e:
+            pytest.xfail(f'Not waiting for flood control: {e}')
+        except TimedOut as e:
+            pytest.xfail(f'Ignoring TimedOut error: {e}')
 
 
 CMD_PATTERN = re.compile(r'/[\da-z_]{1,32}(?:@\w{1,32})?')
 DATE = datetime.datetime.now()
 
 
-def make_message(text, **kwargs):
+async def make_message(text, **kwargs):
     """
     Testing utility factory to create a fake ``telegram.Message`` with
     reasonable defaults for mimicking a real message.
     :param text: (str) message text
     :return: a (fake) ``telegram.Message``
     """
+    bot = kwargs.pop('bot', None)
+    if bot is None:
+        bot = await make_bot(get_bot())
+        await bot.do_init()
     return Message(
         message_id=1,
         from_user=kwargs.pop('user', User(id=1, first_name='', is_bot=False)),
         date=kwargs.pop('date', DATE),
         chat=kwargs.pop('chat', Chat(id=1, type='')),
         text=text,
-        bot=kwargs.pop('bot', make_bot(get_bot())),
+        bot=bot,
         **kwargs,
     )
 
@@ -339,13 +376,13 @@ def timezone(tzinfo):
     return tzinfo
 
 
-def expect_bad_request(func, message, reason):
+async def expect_bad_request(func, message, reason):
     """
     Wrapper for testing bot functions expected to result in an :class:`telegram.error.BadRequest`.
     Makes it XFAIL, if the specified error message is present.
 
     Args:
-        func: The callable to be executed.
+        func: The awaitable to be executed.
         message: The expected message of the bad request error. If another message is present,
             the error will be reraised.
         reason: Explanation for the XFAIL.
@@ -354,7 +391,7 @@ def expect_bad_request(func, message, reason):
         On success, returns the return value of :attr:`func`
     """
     try:
-        return func()
+        return await func()
     except BadRequest as e:
         if message in str(e):
             pytest.xfail(f'{reason}. {e}')
@@ -493,7 +530,7 @@ def check_shortcut_call(
     return True
 
 
-def check_defaults_handling(
+async def check_defaults_handling(
     method: Callable,
     bot: Bot,
     return_value=None,
@@ -555,7 +592,7 @@ def check_defaults_handling(
 
     expected_return_values = [None, []] if return_value is None else [return_value]
 
-    def make_assertion(_, data, timeout=DEFAULT_NONE, df_value=DEFAULT_NONE):
+    async def make_assertion(_, data, timeout=DEFAULT_NONE, df_value=DEFAULT_NONE):
         expected_timeout = method_timeout if df_value == DEFAULT_NONE else df_value
         if timeout != expected_timeout:
             pytest.fail(f'Got value {timeout} for "timeout", expected {expected_timeout}')
@@ -599,13 +636,13 @@ def check_defaults_handling(
             )
             assertion_callback = functools.partial(make_assertion, df_value=default_value)
             setattr(bot.request, 'post', assertion_callback)
-            assert method(**kwargs) in expected_return_values
+            assert await method(**kwargs) in expected_return_values
 
             # 2: test that we get the manually passed non-None value
             kwargs = build_kwargs(shortcut_signature, kwargs_need_default, dfv='non-None-value')
             assertion_callback = functools.partial(make_assertion, df_value='non-None-value')
             setattr(bot.request, 'post', assertion_callback)
-            assert method(**kwargs) in expected_return_values
+            assert await method(**kwargs) in expected_return_values
 
             # 3: test that we get the manually passed None value
             kwargs = build_kwargs(
@@ -615,7 +652,7 @@ def check_defaults_handling(
             )
             assertion_callback = functools.partial(make_assertion, df_value=None)
             setattr(bot.request, 'post', assertion_callback)
-            assert method(**kwargs) in expected_return_values
+            assert await method(**kwargs) in expected_return_values
     except Exception as exc:
         raise exc
     finally:

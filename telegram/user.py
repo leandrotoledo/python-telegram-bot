@@ -151,7 +151,7 @@ class User(TelegramObject):
             return f"https://t.me/{self.username}"
         return None
 
-    def get_profile_photos(
+    async def get_profile_photos(
         self,
         offset: int = None,
         limit: int = 100,
@@ -168,7 +168,7 @@ class User(TelegramObject):
 
         """
 
-        return self.bot.get_user_profile_photos(
+        return await self.bot.get_user_profile_photos(
             user_id=self.id,
             offset=offset,
             limit=limit,
@@ -219,7 +219,7 @@ class User(TelegramObject):
             return util_mention_html(self.id, name)
         return util_mention_html(self.id, self.full_name)
 
-    def pin_message(
+    async def pin_message(
         self,
         message_id: Union[str, int],
         disable_notification: ODVInput[bool] = DEFAULT_NONE,
@@ -238,7 +238,7 @@ class User(TelegramObject):
             :obj:`bool`: On success, :obj:`True` is returned.
 
         """
-        return self.bot.pin_chat_message(
+        return await self.bot.pin_chat_message(
             chat_id=self.id,
             message_id=message_id,
             disable_notification=disable_notification,
@@ -246,7 +246,7 @@ class User(TelegramObject):
             api_kwargs=api_kwargs,
         )
 
-    def unpin_message(
+    async def unpin_message(
         self,
         timeout: ODVInput[float] = DEFAULT_NONE,
         api_kwargs: JSONDict = None,
@@ -264,14 +264,14 @@ class User(TelegramObject):
             :obj:`bool`: On success, :obj:`True` is returned.
 
         """
-        return self.bot.unpin_chat_message(
+        return await self.bot.unpin_chat_message(
             chat_id=self.id,
             timeout=timeout,
             api_kwargs=api_kwargs,
             message_id=message_id,
         )
 
-    def unpin_all_messages(
+    async def unpin_all_messages(
         self,
         timeout: ODVInput[float] = DEFAULT_NONE,
         api_kwargs: JSONDict = None,
@@ -289,13 +289,13 @@ class User(TelegramObject):
             :obj:`bool`: On success, :obj:`True` is returned.
 
         """
-        return self.bot.unpin_all_chat_messages(
+        return await self.bot.unpin_all_chat_messages(
             chat_id=self.id,
             timeout=timeout,
             api_kwargs=api_kwargs,
         )
 
-    def send_message(
+    async def send_message(
         self,
         text: str,
         parse_mode: ODVInput[str] = DEFAULT_NONE,
@@ -318,7 +318,7 @@ class User(TelegramObject):
             :class:`telegram.Message`: On success, instance representing the message posted.
 
         """
-        return self.bot.send_message(
+        return await self.bot.send_message(
             chat_id=self.id,
             text=text,
             parse_mode=parse_mode,
@@ -332,7 +332,7 @@ class User(TelegramObject):
             entities=entities,
         )
 
-    def send_photo(
+    async def send_photo(
         self,
         photo: Union[FileInput, 'PhotoSize'],
         caption: str = None,
@@ -356,7 +356,7 @@ class User(TelegramObject):
             :class:`telegram.Message`: On success, instance representing the message posted.
 
         """
-        return self.bot.send_photo(
+        return await self.bot.send_photo(
             chat_id=self.id,
             photo=photo,
             caption=caption,
@@ -371,7 +371,7 @@ class User(TelegramObject):
             filename=filename,
         )
 
-    def send_media_group(
+    async def send_media_group(
         self,
         media: List[
             Union['InputMediaAudio', 'InputMediaDocument', 'InputMediaPhoto', 'InputMediaVideo']
@@ -392,7 +392,7 @@ class User(TelegramObject):
             List[:class:`telegram.Message`:] On success, instance representing the message posted.
 
         """
-        return self.bot.send_media_group(
+        return await self.bot.send_media_group(
             chat_id=self.id,
             media=media,
             disable_notification=disable_notification,
@@ -402,7 +402,7 @@ class User(TelegramObject):
             allow_sending_without_reply=allow_sending_without_reply,
         )
 
-    def send_audio(
+    async def send_audio(
         self,
         audio: Union[FileInput, 'Audio'],
         duration: int = None,
@@ -430,7 +430,7 @@ class User(TelegramObject):
             :class:`telegram.Message`: On success, instance representing the message posted.
 
         """
-        return self.bot.send_audio(
+        return await self.bot.send_audio(
             chat_id=self.id,
             audio=audio,
             duration=duration,
@@ -449,7 +449,7 @@ class User(TelegramObject):
             filename=filename,
         )
 
-    def send_chat_action(
+    async def send_chat_action(
         self,
         action: str,
         timeout: ODVInput[float] = DEFAULT_NONE,
@@ -465,7 +465,7 @@ class User(TelegramObject):
             :obj:`True`: On success.
 
         """
-        return self.bot.send_chat_action(
+        return await self.bot.send_chat_action(
             chat_id=self.id,
             action=action,
             timeout=timeout,
@@ -475,7 +475,7 @@ class User(TelegramObject):
     send_action = send_chat_action
     """Alias for :attr:`send_chat_action`"""
 
-    def send_contact(
+    async def send_contact(
         self,
         phone_number: str = None,
         first_name: str = None,
@@ -499,7 +499,7 @@ class User(TelegramObject):
             :class:`telegram.Message`: On success, instance representing the message posted.
 
         """
-        return self.bot.send_contact(
+        return await self.bot.send_contact(
             chat_id=self.id,
             phone_number=phone_number,
             first_name=first_name,
@@ -514,7 +514,7 @@ class User(TelegramObject):
             allow_sending_without_reply=allow_sending_without_reply,
         )
 
-    def send_dice(
+    async def send_dice(
         self,
         disable_notification: ODVInput[bool] = DEFAULT_NONE,
         reply_to_message_id: Union[int, str] = None,
@@ -534,7 +534,7 @@ class User(TelegramObject):
             :class:`telegram.Message`: On success, instance representing the message posted.
 
         """
-        return self.bot.send_dice(
+        return await self.bot.send_dice(
             chat_id=self.id,
             disable_notification=disable_notification,
             reply_to_message_id=reply_to_message_id,
@@ -545,7 +545,7 @@ class User(TelegramObject):
             allow_sending_without_reply=allow_sending_without_reply,
         )
 
-    def send_document(
+    async def send_document(
         self,
         document: Union[FileInput, 'Document'],
         filename: str = None,
@@ -571,7 +571,7 @@ class User(TelegramObject):
             :class:`telegram.Message`: On success, instance representing the message posted.
 
         """
-        return self.bot.send_document(
+        return await self.bot.send_document(
             chat_id=self.id,
             document=document,
             filename=filename,
@@ -588,7 +588,7 @@ class User(TelegramObject):
             caption_entities=caption_entities,
         )
 
-    def send_game(
+    async def send_game(
         self,
         game_short_name: str,
         disable_notification: DVInput[bool] = DEFAULT_NONE,
@@ -608,7 +608,7 @@ class User(TelegramObject):
             :class:`telegram.Message`: On success, instance representing the message posted.
 
         """
-        return self.bot.send_game(
+        return await self.bot.send_game(
             chat_id=self.id,
             game_short_name=game_short_name,
             disable_notification=disable_notification,
@@ -619,7 +619,7 @@ class User(TelegramObject):
             allow_sending_without_reply=allow_sending_without_reply,
         )
 
-    def send_invoice(
+    async def send_invoice(
         self,
         title: str,
         description: str,
@@ -657,7 +657,7 @@ class User(TelegramObject):
             :class:`telegram.Message`: On success, instance representing the message posted.
 
         """
-        return self.bot.send_invoice(
+        return await self.bot.send_invoice(
             chat_id=self.id,
             title=title,
             description=description,
@@ -686,7 +686,7 @@ class User(TelegramObject):
             allow_sending_without_reply=allow_sending_without_reply,
         )
 
-    def send_location(
+    async def send_location(
         self,
         latitude: float = None,
         longitude: float = None,
@@ -712,7 +712,7 @@ class User(TelegramObject):
             :class:`telegram.Message`: On success, instance representing the message posted.
 
         """
-        return self.bot.send_location(
+        return await self.bot.send_location(
             chat_id=self.id,
             latitude=latitude,
             longitude=longitude,
@@ -729,7 +729,7 @@ class User(TelegramObject):
             allow_sending_without_reply=allow_sending_without_reply,
         )
 
-    def send_animation(
+    async def send_animation(
         self,
         animation: Union[FileInput, 'Animation'],
         duration: int = None,
@@ -757,7 +757,7 @@ class User(TelegramObject):
             :class:`telegram.Message`: On success, instance representing the message posted.
 
         """
-        return self.bot.send_animation(
+        return await self.bot.send_animation(
             chat_id=self.id,
             animation=animation,
             duration=duration,
@@ -776,7 +776,7 @@ class User(TelegramObject):
             filename=filename,
         )
 
-    def send_sticker(
+    async def send_sticker(
         self,
         sticker: Union[FileInput, 'Sticker'],
         disable_notification: DVInput[bool] = DEFAULT_NONE,
@@ -796,7 +796,7 @@ class User(TelegramObject):
             :class:`telegram.Message`: On success, instance representing the message posted.
 
         """
-        return self.bot.send_sticker(
+        return await self.bot.send_sticker(
             chat_id=self.id,
             sticker=sticker,
             disable_notification=disable_notification,
@@ -807,7 +807,7 @@ class User(TelegramObject):
             allow_sending_without_reply=allow_sending_without_reply,
         )
 
-    def send_video(
+    async def send_video(
         self,
         video: Union[FileInput, 'Video'],
         duration: int = None,
@@ -836,7 +836,7 @@ class User(TelegramObject):
             :class:`telegram.Message`: On success, instance representing the message posted.
 
         """
-        return self.bot.send_video(
+        return await self.bot.send_video(
             chat_id=self.id,
             video=video,
             duration=duration,
@@ -856,7 +856,7 @@ class User(TelegramObject):
             filename=filename,
         )
 
-    def send_venue(
+    async def send_venue(
         self,
         latitude: float = None,
         longitude: float = None,
@@ -884,7 +884,7 @@ class User(TelegramObject):
             :class:`telegram.Message`: On success, instance representing the message posted.
 
         """
-        return self.bot.send_venue(
+        return await self.bot.send_venue(
             chat_id=self.id,
             latitude=latitude,
             longitude=longitude,
@@ -903,7 +903,7 @@ class User(TelegramObject):
             allow_sending_without_reply=allow_sending_without_reply,
         )
 
-    def send_video_note(
+    async def send_video_note(
         self,
         video_note: Union[FileInput, 'VideoNote'],
         duration: int = None,
@@ -927,7 +927,7 @@ class User(TelegramObject):
             :class:`telegram.Message`: On success, instance representing the message posted.
 
         """
-        return self.bot.send_video_note(
+        return await self.bot.send_video_note(
             chat_id=self.id,
             video_note=video_note,
             duration=duration,
@@ -942,7 +942,7 @@ class User(TelegramObject):
             filename=filename,
         )
 
-    def send_voice(
+    async def send_voice(
         self,
         voice: Union[FileInput, 'Voice'],
         duration: int = None,
@@ -967,7 +967,7 @@ class User(TelegramObject):
             :class:`telegram.Message`: On success, instance representing the message posted.
 
         """
-        return self.bot.send_voice(
+        return await self.bot.send_voice(
             chat_id=self.id,
             voice=voice,
             duration=duration,
@@ -983,7 +983,7 @@ class User(TelegramObject):
             filename=filename,
         )
 
-    def send_poll(
+    async def send_poll(
         self,
         question: str,
         options: List[str],
@@ -1015,7 +1015,7 @@ class User(TelegramObject):
             :class:`telegram.Message`: On success, instance representing the message posted.
 
         """
-        return self.bot.send_poll(
+        return await self.bot.send_poll(
             chat_id=self.id,
             question=question,
             options=options,
@@ -1037,7 +1037,7 @@ class User(TelegramObject):
             explanation_entities=explanation_entities,
         )
 
-    def send_copy(
+    async def send_copy(
         self,
         from_chat_id: Union[str, int],
         message_id: Union[str, int],
@@ -1061,7 +1061,7 @@ class User(TelegramObject):
             :class:`telegram.Message`: On success, instance representing the message posted.
 
         """
-        return self.bot.copy_message(
+        return await self.bot.copy_message(
             chat_id=self.id,
             from_chat_id=from_chat_id,
             message_id=message_id,
@@ -1076,7 +1076,7 @@ class User(TelegramObject):
             api_kwargs=api_kwargs,
         )
 
-    def copy_message(
+    async def copy_message(
         self,
         chat_id: Union[int, str],
         message_id: Union[str, int],
@@ -1100,7 +1100,7 @@ class User(TelegramObject):
             :class:`telegram.Message`: On success, instance representing the message posted.
 
         """
-        return self.bot.copy_message(
+        return await self.bot.copy_message(
             from_chat_id=self.id,
             chat_id=chat_id,
             message_id=message_id,
