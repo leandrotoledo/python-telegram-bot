@@ -22,6 +22,7 @@ from typing import NoReturn, Optional, Dict, Any
 
 import pytz
 
+from telegram.utils.deprecate import set_new_attribute_deprecated
 from telegram.utils.helpers import DEFAULT_NONE
 from telegram.utils.types import ODVInput
 
@@ -79,6 +80,19 @@ class Defaults:
             :meth:`Dispatcher.add_error_handler`.
     """
 
+    __slots__ = (
+        '_timeout',
+        '_tzinfo',
+        '_disable_web_page_preview',
+        '_run_async',
+        '_quote',
+        '_disable_notification',
+        '_allow_sending_without_reply',
+        '_parse_mode',
+        '_api_defaults',
+        '__dict__',
+    )
+
     def __init__(
         self,
         parse_mode: str = None,
@@ -114,8 +128,11 @@ class Defaults:
             if value not in [None, DEFAULT_NONE]:
                 self._api_defaults[kwarg] = value
         # Special casing, as None is a valid default value
-        if self.timeout != DEFAULT_NONE:
-            self._api_defaults['timeout'] = self.timeout
+        if self._timeout != DEFAULT_NONE:
+            self._api_defaults['timeout'] = self._timeout
+
+    def __setattr__(self, key: str, value: object) -> None:
+        set_new_attribute_deprecated(self, key, value)
 
     @property
     def api_defaults(self) -> Dict[str, Any]:
@@ -236,7 +253,7 @@ class Defaults:
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Defaults):
-            return self.__dict__ == other.__dict__
+            return all(getattr(self, attr) == getattr(other, attr) for attr in self.__slots__)
         return False
 
     def __ne__(self, other: object) -> bool:

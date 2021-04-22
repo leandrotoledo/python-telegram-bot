@@ -16,7 +16,6 @@
 #
 # You should have received a copy of the GNU Lesser Public License
 # along with this program.  If not, see [http://www.gnu.org/licenses/].
-
 import os
 from pathlib import Path
 
@@ -57,6 +56,14 @@ class TestAnimation:
     mime_type = 'video/mp4'
     file_size = 4127
     caption = "Test *animation*"
+
+    def test_slot_behaviour(self, animation, recwarn, mro_slots):
+        for attr in animation.__slots__:
+            assert getattr(animation, attr, 'err') != 'err', f"got extra slot '{attr}'"
+        assert not animation.__dict__, f"got missing slot(s): {animation.__dict__}"
+        assert len(mro_slots(animation)) == len(set(mro_slots(animation))), "duplicate slot"
+        animation.custom, animation.file_name = 'should give warning', self.file_name
+        assert len(recwarn) == 1 and 'custom' in str(recwarn[0].message), recwarn.list
 
     def test_creation(self, animation):
         assert isinstance(animation, Animation)
@@ -99,6 +106,7 @@ class TestAnimation:
 
     @flaky(3, 1)
     @pytest.mark.timeout(10)
+    @pytest.mark.filterwarnings("ignore:.*custom attributes")
     def test_send_animation_custom_filename(self, bot, chat_id, animation_file, monkeypatch):
         def make_assertion(url, data, **kwargs):
             return data['animation'].filename == 'custom_filename'
@@ -106,6 +114,7 @@ class TestAnimation:
         monkeypatch.setattr(bot.request, 'post', make_assertion)
 
         assert bot.send_animation(chat_id, animation_file, filename='custom_filename')
+        monkeypatch.delattr(bot.request, 'post')
 
     @flaky(3, 1)
     @pytest.mark.timeout(10)
@@ -204,6 +213,7 @@ class TestAnimation:
         monkeypatch.setattr(bot, '_post', make_assertion)
         bot.send_animation(chat_id, file, thumb=file)
         assert test_flag
+        monkeypatch.delattr(bot, '_post')
 
     @flaky(3, 1)
     @pytest.mark.timeout(10)

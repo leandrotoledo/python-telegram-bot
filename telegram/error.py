@@ -39,6 +39,9 @@ def _lstrip_str(in_s: str, lstr: str) -> str:
 
 
 class TelegramError(Exception):
+    # Apparently the base class Exception already has __dict__ in it, so its not included here
+    __slots__ = ('message',)
+
     def __init__(self, message: str):
         super().__init__()
 
@@ -58,10 +61,12 @@ class TelegramError(Exception):
 
 
 class Unauthorized(TelegramError):
-    pass
+    __slots__ = ()
 
 
 class InvalidToken(TelegramError):
+    __slots__ = ()
+
     def __init__(self) -> None:
         super().__init__('Invalid token')
 
@@ -70,14 +75,16 @@ class InvalidToken(TelegramError):
 
 
 class NetworkError(TelegramError):
-    pass
+    __slots__ = ()
 
 
 class BadRequest(NetworkError):
-    pass
+    __slots__ = ()
 
 
 class TimedOut(NetworkError):
+    __slots__ = ()
+
     def __init__(self) -> None:
         super().__init__('Timed out')
 
@@ -91,6 +98,8 @@ class ChatMigrated(TelegramError):
         new_chat_id (:obj:`int`): The new chat id of the group.
 
     """
+
+    __slots__ = ('new_chat_id',)
 
     def __init__(self, new_chat_id: int):
         super().__init__(f'Group migrated to supergroup. New chat id: {new_chat_id}')
@@ -106,6 +115,8 @@ class RetryAfter(TelegramError):
         retry_after (:obj:`int`): Time in seconds, after which the bot can retry the request.
 
     """
+
+    __slots__ = ('retry_after',)
 
     def __init__(self, retry_after: int):
         super().__init__(f'Flood control exceeded. Retry in {float(retry_after)} seconds')
@@ -123,6 +134,8 @@ class Conflict(TelegramError):
         msg (:obj:`str`): The message from telegrams server.
 
     """
+
+    __slots__ = ()
 
     def __reduce__(self) -> Tuple[type, Tuple[str]]:
         return self.__class__, (self.message,)

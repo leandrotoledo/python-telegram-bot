@@ -70,6 +70,7 @@ from telegram.error import (
     Unauthorized,
 )
 from telegram.utils.types import JSONDict
+from telegram.utils.deprecate import set_new_attribute_deprecated
 
 
 def _render_part(self: RequestField, name: str, value: str) -> str:  # pylint: disable=W0613
@@ -109,6 +110,8 @@ class Request:
             (default: 5.)
 
     """
+
+    __slots__ = ('_connect_timeout', '_con_pool_size', '_con_pool', '__dict__')
 
     def __init__(
         self,
@@ -187,6 +190,9 @@ class Request:
                     mgr.proxy_headers.update(auth_hdrs)
 
                 self._con_pool = mgr
+
+    def __setattr__(self, key: str, value: object) -> None:
+        set_new_attribute_deprecated(self, key, value)
 
     @property
     def con_pool_size(self) -> int:
