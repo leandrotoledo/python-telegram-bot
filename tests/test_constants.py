@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# A library that provides a Python interface to the Telegram Bot API
+# A library that provides a Python Interface to the Telegram Bot API
 # Copyright (C) 2015-2021
 # Leandro Toledo de Souza <devs@python-telegram-bot.org>
 #
@@ -45,6 +45,5 @@ class TestConstants:
         with pytest.raises(
             BadRequest,
             match="Media_caption_too_long",
-        ):
-            with open('tests/data/telegram.png', 'rb') as f:
-                bot.send_photo(photo=f, caption=bad_caption, chat_id=chat_id)
+        ), open('tests/data/telegram.png', 'rb') as f:
+            bot.send_photo(photo=f, caption=bad_caption, chat_id=chat_id)

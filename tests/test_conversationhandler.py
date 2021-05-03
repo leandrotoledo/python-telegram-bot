@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# A library that provides a Python interface to the Telegram Bot API
+# A library that provides a Python Interface to the Telegram Bot API
 # Copyright (C) 2015-2021
 # Leandro Toledo de Souza <devs@python-telegram-bot.org>
 #
@@ -72,8 +72,7 @@ def raise_dphs(func):
         result = func(self, *args, **kwargs)
         if self.raise_dp_handler_stop:
             raise DispatcherHandlerStop(result)
-        else:
-            return result
+        return result
 
     return decorator
 
@@ -168,8 +167,7 @@ class TestConversationHandler:
     def start(self, bot, update):
         if isinstance(update, Update):
             return self._set_state(update, self.THIRSTY)
-        else:
-            return self._set_state(bot, self.THIRSTY)
+        return self._set_state(bot, self.THIRSTY)
 
     @raise_dphs
     def end(self, bot, update):
@@ -187,8 +185,7 @@ class TestConversationHandler:
     def brew(self, bot, update):
         if isinstance(update, Update):
             return self._set_state(update, self.BREWING)
-        else:
-            return self._set_state(bot, self.BREWING)
+        return self._set_state(bot, self.BREWING)
 
     @raise_dphs
     def drink(self, bot, update):

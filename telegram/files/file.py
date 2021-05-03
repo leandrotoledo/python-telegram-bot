@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# A library that provides a Python interface to the Telegram Bot API
+# A library that provides a Python Interface to the Telegram Bot API
 # Copyright (C) 2015-2021
 # Leandro Toledo de Souza <devs@python-telegram-bot.org>
 #
@@ -195,4 +195,9 @@ class File(TelegramObject):
         return buf
 
     def set_credentials(self, credentials: 'FileCredentials') -> None:
+        """Sets the passport credentials for the file.
+
+        Args:
+            credentials (:class:`telegram.FileCredentials`): The credentials.
+        """
         self._credentials = credentials

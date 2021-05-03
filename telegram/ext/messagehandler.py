@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# A library that provides a Python interface to the Telegram Bot API
+# A library that provides a Python Interface to the Telegram Bot API
 # Copyright (C) 2015-2021
 # Leandro Toledo de Souza <devs@python-telegram-bot.org>
 #
@@ -200,5 +200,6 @@ class MessageHandler(Handler[Update]):
         dispatcher: 'Dispatcher',
         check_result: Optional[Union[bool, Dict[str, object]]],
     ) -> None:
+        """Adds possible output of data filters to the :class:`CallbackContext`."""
         if isinstance(check_result, dict):
             context.update(check_result)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# A library that provides a Python interface to the Telegram Bot API
+# A library that provides a Python Interface to the Telegram Bot API
 # Copyright (C) 2015-2021
 # Leandro Toledo de Souza <devs@python-telegram-bot.org>
 #
@@ -260,7 +260,6 @@ class TestAnimation:
         animation = Animation.de_json(json_dict, bot)
         assert animation.file_id == self.animation_file_id
         assert animation.file_unique_id == self.animation_file_unique_id
-        assert animation.thumb == animation.thumb
         assert animation.file_name == self.file_name
         assert animation.mime_type == self.mime_type
         assert animation.file_size == self.file_size

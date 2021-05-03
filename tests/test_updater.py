@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# A library that provides a Python interface to the Telegram Bot API
+# A library that provides a Python Interface to the Telegram Bot API
 # Copyright (C) 2015-2021
 # Leandro Toledo de Souza <devs@python-telegram-bot.org>
 #
@@ -267,19 +267,20 @@ class TestUpdater:
         ip = '127.0.0.1'
         port = randrange(1024, 49152)  # Select random port
 
-        with set_asyncio_event_loop(asyncio.ProactorEventLoop()):
-            with pytest.raises(TypeError, match='`ProactorEventLoop` is incompatible'):
-                updater._start_webhook(
-                    ip,
-                    port,
-                    url_path='TOKEN',
-                    cert=None,
-                    key=None,
-                    bootstrap_retries=0,
-                    drop_pending_updates=False,
-                    webhook_url=None,
-                    allowed_updates=None,
-                )
+        with set_asyncio_event_loop(asyncio.ProactorEventLoop()), pytest.raises(
+            TypeError, match='`ProactorEventLoop` is incompatible'
+        ):
+            updater._start_webhook(
+                ip,
+                port,
+                url_path='TOKEN',
+                cert=None,
+                key=None,
+                bootstrap_retries=0,
+                drop_pending_updates=False,
+                webhook_url=None,
+                allowed_updates=None,
+            )
 
     @pytest.mark.skipif(
         os.name != 'nt' or sys.version_info < (3, 8),

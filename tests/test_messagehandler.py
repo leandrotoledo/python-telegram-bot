@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# A library that provides a Python interface to the Telegram Bot API
+# A library that provides a Python Interface to the Telegram Bot API
 # Copyright (C) 2015-2021
 # Leandro Toledo de Souza <devs@python-telegram-bot.org>
 #
@@ -121,13 +121,13 @@ class TestMessageHandler:
 
     def callback_context_regex1(self, update, context):
         if context.matches:
-            types = all([type(res) == self.SRE_TYPE for res in context.matches])
+            types = all(type(res) is self.SRE_TYPE for res in context.matches)
             num = len(context.matches) == 1
             self.test_flag = types and num
 
     def callback_context_regex2(self, update, context):
         if context.matches:
-            types = all([type(res) == self.SRE_TYPE for res in context.matches])
+            types = all(type(res) is self.SRE_TYPE for res in context.matches)
             num = len(context.matches) == 2
             self.test_flag = types and num
 

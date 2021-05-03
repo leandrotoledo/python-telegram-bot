@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# A library that provides a Python interface to the Telegram Bot API
+# A library that provides a Python Interface to the Telegram Bot API
 # Copyright (C) 2015-2021
 # Leandro Toledo de Souza <devs@python-telegram-bot.org>
 #
@@ -75,7 +75,6 @@ class Promise:
 
     def run(self) -> None:
         """Calls the :attr:`pooled_function` callable."""
-
         try:
             self._result = self.pooled_function(*self.args, **self.kwargs)
 
@@ -133,5 +132,6 @@ class Promise:
     @property
     def exception(self) -> Optional[Exception]:
         """The exception raised by :attr:`pooled_function` or ``None`` if no exception has been
-        raised (yet)."""
+        raised (yet).
+        """
         return self._exception

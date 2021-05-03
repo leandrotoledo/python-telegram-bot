@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# A library that provides a Python interface to the Telegram Bot API
+# A library that provides a Python Interface to the Telegram Bot API
 # Copyright (C) 2015-2021
 # Leandro Toledo de Souza <devs@python-telegram-bot.org>
 #
@@ -545,9 +545,9 @@ class Updater:
         if current_interval == 0:
             current_interval = 1
         elif current_interval < 30:
-            current_interval += current_interval / 2
-        elif current_interval > 30:
-            current_interval = 30
+            current_interval = 1.5 * current_interval
+        else:
+            current_interval = min(30.0, current_interval)
         return current_interval
 
     @no_type_check
@@ -597,14 +597,17 @@ class Updater:
             webhook_url = self._gen_webhook_url(listen, port, url_path)
 
         # We pass along the cert to the webhook if present.
+        cert_file = open(cert, 'rb') if cert is not None else None
         self._bootstrap(
             max_retries=bootstrap_retries,
             drop_pending_updates=drop_pending_updates,
             webhook_url=webhook_url,
             allowed_updates=allowed_updates,
-            cert=open(cert, 'rb') if cert is not None else None,
+            cert=cert_file,
             ip_address=ip_address,
         )
+        if cert_file is not None:
+            cert_file.close()
 
         self.httpd.serve_forever(force_event_loop=force_event_loop, ready=ready)
 
@@ -680,7 +683,6 @@ class Updater:
 
     def stop(self) -> None:
         """Stops the polling/webhook thread, the dispatcher and the job queue."""
-
         self.job_queue.stop()
         with self.__lock:
             if self.running or self.dispatcher.has_running_threads:
@@ -721,7 +723,7 @@ class Updater:
         self.__threads = []
 
     @no_type_check
-    def signal_handler(self, signum, frame) -> None:
+    def _signal_handler(self, signum, frame) -> None:
         self.is_idle = False
         if self.running:
             self.logger.info(
@@ -751,7 +753,7 @@ class Updater:
 
         """
         for sig in stop_signals:
-            signal(sig, self.signal_handler)
+            signal(sig, self._signal_handler)
 
         self.is_idle = True
 

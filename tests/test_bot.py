@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# A library that provides a Python interface to the Telegram Bot API
+# A library that provides a Python Interface to the Telegram Bot API
 # Copyright (C) 2015-2021
 # Leandro Toledo de Souza <devs@python-telegram-bot.org>
 #
@@ -85,7 +85,7 @@ def chat_permissions():
 def inline_results_callback(page=None):
     if not page:
         return [InlineQueryResultArticle(i, str(i), None) for i in range(1, 254)]
-    elif page <= 5:
+    if page <= 5:
         return [
             InlineQueryResultArticle(i, str(i), None)
             for i in range(page * 5 + 1, (page + 1) * 5 + 1)
@@ -212,11 +212,13 @@ class TestBot:
 
     @flaky(3, 1)
     def test_forward_message(self, bot, chat_id, message):
-        message = bot.forward_message(chat_id, from_chat_id=chat_id, message_id=message.message_id)
+        forward_message = bot.forward_message(
+            chat_id, from_chat_id=chat_id, message_id=message.message_id
+        )
 
-        assert message.text == message.text
-        assert message.forward_from.username == message.from_user.username
-        assert isinstance(message.forward_date, dtm.datetime)
+        assert forward_message.text == message.text
+        assert forward_message.forward_from.username == message.from_user.username
+        assert isinstance(forward_message.forward_date, dtm.datetime)
 
     @flaky(3, 1)
     def test_delete_message(self, bot, chat_id):
@@ -782,7 +784,7 @@ class TestBot:
         def make_assertion(url, data, *args, **kwargs):
             results = data['results']
             length_matches = len(results) == num_results
-            ids_match = all([int(res['id']) == id_offset + i for i, res in enumerate(results)])
+            ids_match = all(int(res['id']) == id_offset + i for i, res in enumerate(results))
             next_offset_matches = data['next_offset'] == str(expected_next_offset)
             return length_matches and ids_match and next_offset_matches
 
@@ -795,7 +797,7 @@ class TestBot:
         def make_assertion(url, data, *args, **kwargs):
             results = data['results']
             length_matches = len(results) == MAX_INLINE_QUERY_RESULTS
-            ids_match = all([int(res['id']) == 1 + i for i, res in enumerate(results)])
+            ids_match = all(int(res['id']) == 1 + i for i, res in enumerate(results))
             next_offset_matches = data['next_offset'] == '1'
             return length_matches and ids_match and next_offset_matches
 
@@ -808,7 +810,7 @@ class TestBot:
         def make_assertion(url, data, *args, **kwargs):
             results = data['results']
             length_matches = len(results) == 30
-            ids_match = all([int(res['id']) == 1 + i for i, res in enumerate(results)])
+            ids_match = all(int(res['id']) == 1 + i for i, res in enumerate(results))
             next_offset_matches = data['next_offset'] == ''
             return length_matches and ids_match and next_offset_matches
 
@@ -821,7 +823,7 @@ class TestBot:
         def make_assertion(url, data, *args, **kwargs):
             results = data['results']
             length = len(results) == 5
-            ids = all([int(res['id']) == 6 + i for i, res in enumerate(results)])
+            ids = all(int(res['id']) == 6 + i for i, res in enumerate(results))
             next_offset = data['next_offset'] == '2'
             return length and ids and next_offset
 
@@ -1915,14 +1917,13 @@ class TestBot:
                     reply_to_message_id=reply_to_message.message_id,
                 )
             return
-        else:
-            returned = default_bot.copy_message(
-                chat_id,
-                from_chat_id=chat_id,
-                message_id=media_message.message_id,
-                caption="<b>Test</b>",
-                reply_to_message_id=reply_to_message.message_id,
-            )
+        returned = default_bot.copy_message(
+            chat_id,
+            from_chat_id=chat_id,
+            message_id=media_message.message_id,
+            caption="<b>Test</b>",
+            reply_to_message_id=reply_to_message.message_id,
+        )
         # we send a temp message which replies to the returned message id in order to get a
         # message object
         temp_message = default_bot.send_message(

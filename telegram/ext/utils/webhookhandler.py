@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# A library that provides a Python interface to the Telegram Bot API
+# A library that provides a Python Interface to the Telegram Bot API
 # Copyright (C) 2015-2021
 # Leandro Toledo de Souza <devs@python-telegram-bot.org>
 #
@@ -142,7 +142,7 @@ class WebhookAppClass(tornado.web.Application):
         handlers = [(rf"{webhook_path}/?", WebhookHandler, self.shared_objects)]  # noqa
         tornado.web.Application.__init__(self, handlers)  # type: ignore
 
-    def log_request(self, handler: tornado.web.RequestHandler) -> None:
+    def log_request(self, handler: tornado.web.RequestHandler) -> None:  # skipcq: PTC-W0049
         pass
 
 

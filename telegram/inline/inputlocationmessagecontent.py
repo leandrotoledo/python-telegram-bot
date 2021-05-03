@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# A library that provides a Python interface to the Telegram Bot API
+# A library that provides a Python Interface to the Telegram Bot API
 # Copyright (C) 2015-2021
 # Leandro Toledo de Souza <devs@python-telegram-bot.org>
 #
@@ -58,6 +58,7 @@ class InputLocationMessageContent(InputMessageContent):
             proximity alerts about approaching another chat member, in meters.
 
     """
+
     # fmt: on
 
     def __init__(

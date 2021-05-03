@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# A library that provides a Python interface to the Telegram Bot API
+# A library that provides a Python Interface to the Telegram Bot API
 # Copyright (C) 2015-2021
 # Leandro Toledo de Souza <devs@python-telegram-bot.org>
 #
@@ -406,8 +406,8 @@ class TestSendMediaGroup:
         messages = bot.send_media_group(chat_id, media_group)
         assert isinstance(messages, list)
         assert len(messages) == 3
-        assert all([isinstance(mes, Message) for mes in messages])
-        assert all([mes.media_group_id == messages[0].media_group_id for mes in messages])
+        assert all(isinstance(mes, Message) for mes in messages)
+        assert all(mes.media_group_id == messages[0].media_group_id for mes in messages)
         assert all(mes.caption == f'photo {idx+1}' for idx, mes in enumerate(messages))
         assert all(
             mes.caption_entities == [MessageEntity(MessageEntity.BOLD, 0, 5)] for mes in messages
@@ -421,8 +421,8 @@ class TestSendMediaGroup:
         )
         assert isinstance(messages, list)
         assert len(messages) == 3
-        assert all([isinstance(mes, Message) for mes in messages])
-        assert all([mes.media_group_id == messages[0].media_group_id for mes in messages])
+        assert all(isinstance(mes, Message) for mes in messages)
+        assert all(mes.media_group_id == messages[0].media_group_id for mes in messages)
         assert all(mes.caption == f'photo {idx+1}' for idx, mes in enumerate(messages))
         assert all(
             mes.caption_entities == [MessageEntity(MessageEntity.BOLD, 0, 5)] for mes in messages
@@ -491,8 +491,8 @@ class TestSendMediaGroup:
 
         assert isinstance(messages, list)
         assert len(messages) == 3
-        assert all([isinstance(mes, Message) for mes in messages])
-        assert all([mes.media_group_id == messages[0].media_group_id for mes in messages])
+        assert all(isinstance(mes, Message) for mes in messages)
+        assert all(mes.media_group_id == messages[0].media_group_id for mes in messages)
 
     @flaky(3, 1)
     @pytest.mark.parametrize(

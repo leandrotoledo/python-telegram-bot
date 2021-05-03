@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # pylint: disable=W0622
 #
-# A library that provides a Python interface to the Telegram Bot API
+# A library that provides a Python Interface to the Telegram Bot API
 # Copyright (C) 2015-2021
 # Leandro Toledo de Souza <devs@python-telegram-bot.org>
 #
@@ -229,14 +229,16 @@ class Chat(TelegramObject):
     @property
     def link(self) -> Optional[str]:
         """:obj:`str`: Convenience property. If the chat has a :attr:`username`, returns a t.me
-        link of the chat."""
+        link of the chat.
+        """
         if self.username:
             return f"https://t.me/{self.username}"
         return None
 
     @classmethod
     def de_json(cls, data: Optional[JSONDict], bot: 'Bot') -> Optional['Chat']:
-        data = cls.parse_data(data)
+        """See :meth:`telegram.TelegramObject.de_json`."""
+        data = cls._parse_data(data)
 
         if not data:
             return None

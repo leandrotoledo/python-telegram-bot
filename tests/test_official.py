@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# A library that provides a Python interface to the Telegram Bot API
+# A library that provides a Python Interface to the Telegram Bot API
 # Copyright (C) 2015-2021
 # Leandro Toledo de Souza <devs@python-telegram-bot.org>
 #
@@ -121,9 +121,9 @@ def check_object(h4):
             name.startswith('InlineQueryResult') or name.startswith('InputMedia')
         ) and field == 'type':
             continue
-        elif name.startswith('PassportElementError') and field == 'source':
-            continue
-        elif field == 'remove_keyboard':
+        elif (
+            name.startswith('PassportElementError') and field == 'source'
+        ) or field == 'remove_keyboard':
             continue
 
         param = sig.parameters.get(field)
@@ -135,7 +135,7 @@ def check_object(h4):
     ignored = IGNORED_PARAMETERS.copy()
     if name == 'InputFile':
         return
-    elif name == 'InlineQueryResult':
+    if name == 'InlineQueryResult':
         ignored |= {'id', 'type'}
     elif name == 'User':
         ignored |= {'type'}  # TODO: Deprecation

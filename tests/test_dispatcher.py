@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# A library that provides a Python interface to the Telegram Bot API
+# A library that provides a Python Interface to the Telegram Bot API
 # Copyright (C) 2015-2021
 # Leandro Toledo de Souza <devs@python-telegram-bot.org>
 #
@@ -683,7 +683,7 @@ class TestDispatcher:
         assert self.received == 'Unauthorized.'
 
     def test_sensible_worker_thread_names(self, dp2):
-        thread_names = [thread.name for thread in getattr(dp2, '_Dispatcher__async_threads')]
+        thread_names = [thread.name for thread in dp2._Dispatcher__async_threads]
         print(thread_names)
         for thread_name in thread_names:
             assert thread_name.startswith(f"Bot:{dp2.bot.id}:worker:")

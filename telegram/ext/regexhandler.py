@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# A library that provides a Python interface to the Telegram Bot API
+# A library that provides a Python Interface to the Telegram Bot API
 # Copyright (C) 2015-2021
 # Leandro Toledo de Souza <devs@python-telegram-bot.org>
 #
@@ -150,6 +150,10 @@ class RegexHandler(MessageHandler):
         update: Update = None,
         check_result: Optional[Union[bool, Dict[str, Any]]] = None,
     ) -> Dict[str, object]:
+        """Pass the results of ``re.match(pattern, text).{groups(), groupdict()}`` to the
+        callback as a keyword arguments called ``groups`` and ``groupdict``, respectively, if
+        needed.
+        """
         optional_args = super().collect_optional_args(dispatcher, update, check_result)
         if isinstance(check_result, dict):
             if self.pass_groups:

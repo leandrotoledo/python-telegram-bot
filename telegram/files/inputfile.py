@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # pylint: disable=W0622,E0611
 #
-# A library that provides a Python interface to the Telegram Bot API
+# A library that provides a Python Interface to the Telegram Bot API
 # Copyright (C) 2015-2021
 # Leandro Toledo de Souza <devs@python-telegram-bot.org>
 #
@@ -75,7 +75,7 @@ class InputFile:
             self.filename = self.mimetype.replace('/', '.')
 
     @property
-    def field_tuple(self) -> Tuple[str, bytes, str]:
+    def field_tuple(self) -> Tuple[str, bytes, str]:  # skipcq: PY-D0003
         return self.filename, self.input_file_content, self.mimetype
 
     @staticmethod
@@ -102,10 +102,11 @@ class InputFile:
             return None
 
     @staticmethod
-    def is_file(obj: object) -> bool:
+    def is_file(obj: object) -> bool:  # skipcq: PY-D0003
         return hasattr(obj, 'read')
 
     def to_dict(self) -> Optional[str]:
+        """See :meth:`telegram.TelegramObject.to_dict`."""
         if self.attach:
             return 'attach://' + self.attach
         return None

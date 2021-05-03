@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# A library that provides a Python interface to the Telegram Bot API
+# A library that provides a Python Interface to the Telegram Bot API
 # Copyright (C) 2015-2021
 # Leandro Toledo de Souza <devs@python-telegram-bot.org>
 #
@@ -130,10 +130,8 @@ class TestInvoice:
 
     def test_send_object_as_provider_data(self, monkeypatch, bot, chat_id, provider_token):
         def test(url, data, **kwargs):
-            return (
-                data['provider_data'] == '{"test_data": 123456789}'  # Depends if using
-                or data['provider_data'] == '{"test_data":123456789}'
-            )  # ujson or not
+            # depends on whether we're using ujson
+            return data['provider_data'] in ['{"test_data": 123456789}', '{"test_data":123456789}']
 
         monkeypatch.setattr(bot.request, 'post', test)
 

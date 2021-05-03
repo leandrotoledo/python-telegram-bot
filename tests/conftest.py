@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# A library that provides a Python interface to the Telegram Bot API
+# A library that provides a Python Interface to the Telegram Bot API
 # Copyright (C) 2015-2021
 # Leandro Toledo de Souza <devs@python-telegram-bot.org>
 #
@@ -97,10 +97,9 @@ def default_bot(request, bot_info):
     default_bot = DEFAULT_BOTS.get(defaults)
     if default_bot:
         return default_bot
-    else:
-        default_bot = make_bot(bot_info, **{'defaults': defaults})
-        DEFAULT_BOTS[defaults] = default_bot
-        return default_bot
+    default_bot = make_bot(bot_info, **{'defaults': defaults})
+    DEFAULT_BOTS[defaults] = default_bot
+    return default_bot
 
 
 @pytest.fixture(scope='function')
@@ -109,10 +108,9 @@ def tz_bot(timezone, bot_info):
     default_bot = DEFAULT_BOTS.get(defaults)
     if default_bot:
         return default_bot
-    else:
-        default_bot = make_bot(bot_info, **{'defaults': defaults})
-        DEFAULT_BOTS[defaults] = default_bot
-        return default_bot
+    default_bot = make_bot(bot_info, **{'defaults': defaults})
+    DEFAULT_BOTS[defaults] = default_bot
+    return default_bot
 
 
 @pytest.fixture(scope='session')
