@@ -18,7 +18,7 @@
 # along with this program.  If not, see [http://www.gnu.org/licenses/].
 """This module contains custom typing aliases."""
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Any, Dict, List, Optional, Tuple, TypeVar, Union
+from typing import IO, TYPE_CHECKING, Any, Dict, List, Tuple, TypeVar, Union, Optional
 
 if TYPE_CHECKING:
     from telegram import InputFile
@@ -33,9 +33,6 @@ a local file path as string, :class:`pathlib.Path` or the file contents as :obj:
 
 JSONDict = Dict[str, Any]
 """Dictionary containing response from Telegram or data to send to the API."""
-
-ConversationDict = Dict[Tuple[int, ...], Optional[object]]
-"""Dicts as maintained by the :class:`telegram.ext.ConversationHandler`."""
 
 DVType = TypeVar('DVType')
 ODVInput = Optional[Union['DefaultValue[DVType]', DVType]]

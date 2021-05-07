@@ -26,13 +26,25 @@ from functools import wraps
 from queue import Empty, Queue
 from threading import BoundedSemaphore, Event, Lock, Thread, current_thread
 from time import sleep
-from typing import TYPE_CHECKING, Callable, DefaultDict, Dict, List, Optional, Set, Union
+from typing import (
+    TYPE_CHECKING,
+    Callable,
+    DefaultDict,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Union,
+    cast,
+)
 from uuid import uuid4
 
 from telegram import TelegramError, Update
 from telegram.ext import BasePersistence
 from telegram.ext.callbackcontext import CallbackContext
 from telegram.ext.handler import Handler
+import telegram.ext.bot
+from telegram.ext.callbackdatacache import CallbackDataCache
 from telegram.utils.deprecate import TelegramDeprecationWarning
 from telegram.ext.utils.promise import Promise
 from telegram.utils.helpers import DefaultValue, DEFAULT_FALSE
@@ -189,6 +201,17 @@ class Dispatcher:
                 self.bot_data = self.persistence.get_bot_data()
                 if not isinstance(self.bot_data, dict):
                     raise ValueError("bot_data must be of type dict")
+            if self.persistence.store_callback_data:
+                self.bot = cast(telegram.ext.bot.Bot, self.bot)
+                persistent_data = self.persistence.get_callback_data()
+                if persistent_data is not None:
+                    if not isinstance(persistent_data, tuple) and len(persistent_data) != 2:
+                        raise ValueError('callback_data must be a 2-tuple')
+                    self.bot.callback_data_cache = CallbackDataCache(
+                        self.bot,
+                        self.bot.callback_data_cache.maxsize,
+                        persistent_data=persistent_data,
+                    )
         else:
             self.persistence = None
 
@@ -563,6 +586,22 @@ class Dispatcher:
                 else:
                     user_ids = []
 
+            if self.persistence.store_callback_data:
+                self.bot = cast(telegram.ext.bot.Bot, self.bot)
+                try:
+                    self.persistence.update_callback_data(
+                        self.bot.callback_data_cache.persistence_data
+                    )
+                except Exception as exc:
+                    try:
+                        self.dispatch_error(update, exc)
+                    except Exception:
+                        message = (
+                            'Saving callback data raised an error and an '
+                            'uncaught error was raised while handling '
+                            'the error with an error_handler'
+                        )
+                        self.logger.exception(message)
             if self.persistence.store_bot_data:
                 try:
                     self.persistence.update_bot_data(self.bot_data)

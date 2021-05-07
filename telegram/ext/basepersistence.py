@@ -23,8 +23,9 @@ from copy import copy
 from typing import DefaultDict, Dict, Optional, Tuple, cast, ClassVar
 
 from telegram import Bot
+import telegram.ext.bot
 
-from telegram.utils.types import ConversationDict
+from telegram.ext.utils.types import ConversationDict, CDCData
 
 
 class BasePersistence(ABC):
@@ -39,6 +40,8 @@ class BasePersistence(ABC):
     * :meth:`update_chat_data`
     * :meth:`get_user_data`
     * :meth:`update_user_data`
+    * :meth:`get_callback_data`
+    * :meth:`update_callback_data`
     * :meth:`get_conversations`
     * :meth:`update_conversation`
     * :meth:`flush`
@@ -64,7 +67,9 @@ class BasePersistence(ABC):
         store_chat_data (:obj:`bool`, optional): Whether chat_data should be saved by this
             persistence class. Default is :obj:`True` .
         store_bot_data (:obj:`bool`, optional): Whether bot_data should be saved by this
-            persistence class. Default is :obj:`True` .
+            persistence class. Default is :obj:`True`.
+        store_callback_data (:obj:`bool`, optional): Whether callback_data should be saved by this
+            persistence class. Default is :obj:`False`.
 
     Attributes:
         store_user_data (:obj:`bool`): Optional, Whether user_data should be saved by this
@@ -72,6 +77,8 @@ class BasePersistence(ABC):
         store_chat_data (:obj:`bool`): Optional. Whether chat_data should be saved by this
             persistence class.
         store_bot_data (:obj:`bool`): Optional. Whether bot_data should be saved by this
+            persistence class.
+        store_callback_data (:obj:`bool`): Optional. Whether callback_data should be saved by this
             persistence class.
     """
 
@@ -82,9 +89,11 @@ class BasePersistence(ABC):
         get_user_data = instance.get_user_data
         get_chat_data = instance.get_chat_data
         get_bot_data = instance.get_bot_data
+        get_callback_data = instance.get_callback_data
         update_user_data = instance.update_user_data
         update_chat_data = instance.update_chat_data
         update_bot_data = instance.update_bot_data
+        update_callback_data = instance.update_callback_data
 
         def get_user_data_insert_bot() -> DefaultDict[int, Dict[object, object]]:
             return instance.insert_bot(get_user_data())
@@ -95,6 +104,12 @@ class BasePersistence(ABC):
         def get_bot_data_insert_bot() -> Dict[object, object]:
             return instance.insert_bot(get_bot_data())
 
+        def get_callback_data_insert_bot() -> Optional[CDCData]:
+            cdc_data = get_callback_data()
+            if cdc_data is None:
+                return None
+            return instance.insert_bot(cdc_data[0]), cdc_data[1]
+
         def update_user_data_replace_bot(user_id: int, data: Dict) -> None:
             return update_user_data(user_id, instance.replace_bot(data))
 
@@ -104,12 +119,18 @@ class BasePersistence(ABC):
         def update_bot_data_replace_bot(data: Dict) -> None:
             return update_bot_data(instance.replace_bot(data))
 
+        def update_callback_data_replace_bot(data: CDCData) -> None:
+            obj_data, queue = data
+            return update_callback_data((instance.replace_bot(obj_data), queue))
+
         instance.get_user_data = get_user_data_insert_bot
         instance.get_chat_data = get_chat_data_insert_bot
         instance.get_bot_data = get_bot_data_insert_bot
+        instance.get_callback_data = get_callback_data_insert_bot
         instance.update_user_data = update_user_data_replace_bot
         instance.update_chat_data = update_chat_data_replace_bot
         instance.update_bot_data = update_bot_data_replace_bot
+        instance.update_callback_data = update_callback_data_replace_bot
         return instance
 
     def __init__(
@@ -117,10 +138,12 @@ class BasePersistence(ABC):
         store_user_data: bool = True,
         store_chat_data: bool = True,
         store_bot_data: bool = True,
+        store_callback_data: bool = False,
     ):
         self.store_user_data = store_user_data
         self.store_chat_data = store_chat_data
         self.store_bot_data = store_bot_data
+        self.store_callback_data = store_callback_data
         self.bot: Bot = None  # type: ignore[assignment]
 
     def set_bot(self, bot: Bot) -> None:
@@ -129,6 +152,9 @@ class BasePersistence(ABC):
         Args:
             bot (:class:`telegram.Bot`): The bot.
         """
+        if self.store_callback_data and not isinstance(bot, telegram.ext.bot.Bot):
+            raise TypeError('store_callback_data can only be used with telegram.ext.Bot.')
+
         self.bot = bot
 
     @classmethod
@@ -319,6 +345,17 @@ class BasePersistence(ABC):
             :obj:`dict`: The restored bot data.
         """
 
+    def get_callback_data(self) -> Optional[CDCData]:
+        """Will be called by :class:`telegram.ext.Dispatcher` upon creation with a
+        persistence object. If callback data was stored, it should be returned.
+
+        Returns:
+            Optional[:class:`telegram.utils.types.CDCData`:]: The restored meta data as three-tuple
+                of :obj:`int`, dictionary and :class:`collections.deque` or :obj:`None`, if no data
+                was stored.
+        """
+        raise NotImplementedError
+
     @abstractmethod
     def get_conversations(self, name: str) -> ConversationDict:
         """Will be called by :class:`telegram.ext.Dispatcher` when a
@@ -374,6 +411,16 @@ class BasePersistence(ABC):
         Args:
             data (:obj:`dict`): The :attr:`telegram.ext.dispatcher.bot_data` .
         """
+
+    def update_callback_data(self, data: CDCData) -> None:
+        """Will be called by the :class:`telegram.ext.Dispatcher` after a handler has
+        handled an update.
+
+        Args:
+            data (:class:`telegram.utils.types.CDCData`:): The relevant data to restore
+                :attr:`telegram.ext.dispatcher.bot.callback_data_cache`.
+        """
+        raise NotImplementedError
 
     def flush(self) -> None:
         """Will be called by :class:`telegram.ext.Updater` upon receiving a stop signal. Gives the

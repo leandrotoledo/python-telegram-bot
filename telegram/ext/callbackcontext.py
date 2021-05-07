@@ -21,7 +21,8 @@
 from queue import Queue
 from typing import TYPE_CHECKING, Dict, List, Match, NoReturn, Optional, Tuple, Union
 
-from telegram import Update
+from telegram import Update, CallbackQuery
+from telegram.ext import Bot as ExtBot
 
 if TYPE_CHECKING:
     from telegram import Bot
@@ -140,6 +141,32 @@ class CallbackContext:
         raise AttributeError(
             "You can not assign a new value to user_data, see https://git.io/Jt6ic"
         )
+
+    def drop_callback_data(self, callback_query: CallbackQuery) -> None:
+        """
+        Deletes the cached data for the specified callback query.
+
+        Note:
+            Will *not* raise exceptions in case the data is not found in the cache.
+            *Will* raise :class:`KeyError` in case the callback query can not be found in the
+            cache.
+
+        Args:
+            callback_query (:class:`telegram.CallbackQuery`): The callback query.
+
+        Raises:
+            KeyError | RuntimeError: :class:`KeyError`, if the callback query can not be found in
+                the cache and :class:`RuntimeError`, if the bot doesn't allow for arbitrary
+                callback data.
+        """
+        if isinstance(self.bot, ExtBot):
+            if not self.bot.arbitrary_callback_data:
+                raise RuntimeError(
+                    'This telegram.ext.Bot instance does not use arbitrary callback data.'
+                )
+            self.bot.callback_data_cache.drop_data(callback_query)
+        else:
+            raise RuntimeError('telegram.Bot does not allow for arbitrary callback data.')
 
     @classmethod
     def from_error(

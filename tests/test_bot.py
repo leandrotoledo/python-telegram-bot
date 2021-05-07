@@ -45,10 +45,20 @@ from telegram import (
     Dice,
     MessageEntity,
     ParseMode,
+    CallbackQuery,
+    Message,
+    Chat,
+    InlineQueryResultVoice,
 )
 from telegram.constants import MAX_INLINE_QUERY_RESULTS
+from telegram.ext import Bot as ExtBot
 from telegram.error import BadRequest, InvalidToken, NetworkError, RetryAfter
-from telegram.utils.helpers import from_timestamp, escape_markdown, to_timestamp
+from telegram.ext.callbackdatacache import InvalidCallbackData
+from telegram.utils.helpers import (
+    from_timestamp,
+    escape_markdown,
+    to_timestamp,
+)
 from tests.conftest import expect_bad_request, check_defaults_handling
 from tests.bots import FALLBACKS
 
@@ -99,6 +109,10 @@ def inline_results():
 
 
 class TestBot:
+    """
+    Most are executed on tg.ext.Bot, as that class only extends the functionality of tg.bot
+    """
+
     @pytest.mark.parametrize(
         'token',
         argvalues=[
@@ -114,6 +128,15 @@ class TestBot:
     def test_invalid_token(self, token):
         with pytest.raises(InvalidToken, match='Invalid token'):
             Bot(token)
+
+    @pytest.mark.parametrize(
+        'acd_in,maxsize,acd',
+        [(True, 1024, True), (False, 1024, False), (0, 0, True), (None, None, True)],
+    )
+    def test_callback_data_maxsize(self, bot, acd_in, maxsize, acd):
+        bot = ExtBot(bot.token, arbitrary_callback_data=acd_in)
+        assert bot.arbitrary_callback_data == acd
+        assert bot.callback_data_cache.maxsize == maxsize
 
     @flaky(3, 1)
     def test_invalid_token_server_response(self, monkeypatch):
@@ -209,6 +232,38 @@ class TestBot:
         """
         bot_method = getattr(bot, bot_method_name)
         assert check_defaults_handling(bot_method, bot)
+
+    def test_ext_bot_signature(self):
+        """
+        Here we make sure that all methods of ext.Bot have the same signature as the corresponding
+        methods of tg.Bot.
+        """
+        # Some methods of ext.Bot
+        global_extra_args = set()
+        extra_args_per_method = {'__init__': {'arbitrary_callback_data'}}
+
+        for name, method in inspect.getmembers(Bot, predicate=inspect.isfunction):
+            ext_signature = inspect.signature(method)
+            signature = inspect.signature(getattr(Bot, name))
+
+            assert (
+                ext_signature.return_annotation == signature.return_annotation
+            ), f'Wrong return annotation for method {name}'
+            assert set(signature.parameters) == set(
+                ext_signature.parameters
+            ) - global_extra_args - extra_args_per_method.get(
+                name, set()
+            ), f'Wrong set of parameters for method {name}'
+            for param_name, param in signature.parameters.items():
+                assert (
+                    param.annotation == ext_signature.parameters[param_name].annotation
+                ), f'Wrong annotation for parameter {param_name} of method {name}'
+                assert (
+                    param.default == ext_signature.parameters[param_name].default
+                ), f'Wrong default value for parameter {param_name} of method {name}'
+                assert (
+                    param.kind == ext_signature.parameters[param_name].kind
+                ), f'Wrong parameter kind for parameter {param_name} of method {name}'
 
     @flaky(3, 1)
     def test_forward_message(self, bot, chat_id, message):
@@ -1142,6 +1197,41 @@ class TestBot:
         if updates:
             assert isinstance(updates[0], Update)
 
+    def test_get_updates_invalid_callback_data(self, bot, monkeypatch):
+        def post(*args, **kwargs):
+            return [
+                Update(
+                    17,
+                    callback_query=CallbackQuery(
+                        id=1,
+                        from_user=None,
+                        chat_instance=123,
+                        data='invalid data',
+                        message=Message(
+                            1,
+                            from_user=User(1, '', False),
+                            date=None,
+                            chat=Chat(1, ''),
+                            text='Webhook',
+                        ),
+                    ),
+                ).to_dict()
+            ]
+
+        bot.arbitrary_callback_data = True
+        try:
+            monkeypatch.setattr(bot.request, 'post', post)
+            bot.delete_webhook()  # make sure there is no webhook set if webhook tests failed
+            updates = bot.get_updates(timeout=1)
+
+            assert isinstance(updates, list)
+            assert len(updates) == 1
+            assert isinstance(updates[0].callback_query.data, InvalidCallbackData)
+
+        finally:
+            # Reset b/c bots scope is session
+            bot.arbitrary_callback_data = False
+
     @flaky(3, 1)
     @pytest.mark.xfail
     def test_set_webhook_get_webhook_info_and_delete_webhook(self, bot):
@@ -1933,3 +2023,285 @@ class TestBot:
             assert len(message.caption_entities) == 1
         else:
             assert len(message.caption_entities) == 0
+
+    def test_replace_callback_data_send_message(self, bot, chat_id):
+        try:
+            bot.arbitrary_callback_data = True
+            replace_button = InlineKeyboardButton(text='replace', callback_data='replace_test')
+            no_replace_button = InlineKeyboardButton(
+                text='no_replace', url='http://python-telegram-bot.org/'
+            )
+            reply_markup = InlineKeyboardMarkup.from_row(
+                [
+                    replace_button,
+                    no_replace_button,
+                ]
+            )
+            message = bot.send_message(chat_id=chat_id, text='test', reply_markup=reply_markup)
+            inline_keyboard = message.reply_markup.inline_keyboard
+
+            assert inline_keyboard[0][1] == no_replace_button
+            assert inline_keyboard[0][0] == replace_button
+            keyboard = list(bot.callback_data_cache._keyboard_data)[0]
+            data = list(bot.callback_data_cache._keyboard_data[keyboard].button_data.values())[0]
+            assert data == 'replace_test'
+        finally:
+            bot.arbitrary_callback_data = False
+            bot.callback_data_cache.clear_callback_data()
+            bot.callback_data_cache.clear_callback_queries()
+
+    def test_replace_callback_data_stop_poll_and_repl_to_message(self, bot, chat_id):
+        poll_message = bot.send_poll(chat_id=chat_id, question='test', options=['1', '2'])
+        try:
+            bot.arbitrary_callback_data = True
+            replace_button = InlineKeyboardButton(text='replace', callback_data='replace_test')
+            no_replace_button = InlineKeyboardButton(
+                text='no_replace', url='http://python-telegram-bot.org/'
+            )
+            reply_markup = InlineKeyboardMarkup.from_row(
+                [
+                    replace_button,
+                    no_replace_button,
+                ]
+            )
+            poll_message.stop_poll(reply_markup=reply_markup)
+            helper_message = poll_message.reply_text('temp', quote=True)
+            message = helper_message.reply_to_message
+            inline_keyboard = message.reply_markup.inline_keyboard
+
+            assert inline_keyboard[0][1] == no_replace_button
+            assert inline_keyboard[0][0] == replace_button
+            keyboard = list(bot.callback_data_cache._keyboard_data)[0]
+            data = list(bot.callback_data_cache._keyboard_data[keyboard].button_data.values())[0]
+            assert data == 'replace_test'
+        finally:
+            bot.arbitrary_callback_data = False
+            bot.callback_data_cache.clear_callback_data()
+            bot.callback_data_cache.clear_callback_queries()
+
+    def test_replace_callback_data_copy_message(self, bot, chat_id):
+        """This also tests that data is inserted into the buttons of message.reply_to_message
+        where message is the return value of a bot method"""
+        original_message = bot.send_message(chat_id=chat_id, text='original')
+        try:
+            bot.arbitrary_callback_data = True
+            replace_button = InlineKeyboardButton(text='replace', callback_data='replace_test')
+            no_replace_button = InlineKeyboardButton(
+                text='no_replace', url='http://python-telegram-bot.org/'
+            )
+            reply_markup = InlineKeyboardMarkup.from_row(
+                [
+                    replace_button,
+                    no_replace_button,
+                ]
+            )
+            message_id = original_message.copy(chat_id=chat_id, reply_markup=reply_markup)
+            helper_message = bot.send_message(
+                chat_id=chat_id, reply_to_message_id=message_id.message_id, text='temp'
+            )
+            message = helper_message.reply_to_message
+            inline_keyboard = message.reply_markup.inline_keyboard
+
+            assert inline_keyboard[0][1] == no_replace_button
+            assert inline_keyboard[0][0] == replace_button
+            keyboard = list(bot.callback_data_cache._keyboard_data)[0]
+            data = list(bot.callback_data_cache._keyboard_data[keyboard].button_data.values())[0]
+            assert data == 'replace_test'
+        finally:
+            bot.arbitrary_callback_data = False
+            bot.callback_data_cache.clear_callback_data()
+            bot.callback_data_cache.clear_callback_queries()
+
+    # def test_replace_callback_data_reply_to_m
+
+    # TODO: Needs improvement. We need incoming inline query to test answer.
+    def test_replace_callback_data_answer_inline_query(self, monkeypatch, bot, chat_id):
+        # For now just test that our internals pass the correct data
+        def make_assertion(
+            endpoint,
+            data=None,
+            timeout=None,
+            api_kwargs=None,
+        ):
+            inline_keyboard = InlineKeyboardMarkup.de_json(
+                data['results'][0]['reply_markup'], bot
+            ).inline_keyboard
+            assertion_1 = inline_keyboard[0][1] == no_replace_button
+            assertion_2 = inline_keyboard[0][0] != replace_button
+            keyboard, button = (
+                inline_keyboard[0][0].callback_data[:32],
+                inline_keyboard[0][0].callback_data[32:],
+            )
+            assertion_3 = (
+                bot.callback_data_cache._keyboard_data[keyboard].button_data[button]
+                == 'replace_test'
+            )
+            assertion_4 = 'reply_markup' not in data['results'][1]
+            return assertion_1 and assertion_2 and assertion_3 and assertion_4
+
+        try:
+            bot.arbitrary_callback_data = True
+            replace_button = InlineKeyboardButton(text='replace', callback_data='replace_test')
+            no_replace_button = InlineKeyboardButton(
+                text='no_replace', url='http://python-telegram-bot.org/'
+            )
+            reply_markup = InlineKeyboardMarkup.from_row(
+                [
+                    replace_button,
+                    no_replace_button,
+                ]
+            )
+
+            bot.username  # call this here so `bot.get_me()` won't be called after mocking
+            monkeypatch.setattr(bot, '_post', make_assertion)
+            results = [
+                InlineQueryResultArticle(
+                    '11', 'first', InputTextMessageContent('first'), reply_markup=reply_markup
+                ),
+                InlineQueryResultVoice(
+                    '22',
+                    'https://python-telegram-bot.org/static/testfiles/telegram.ogg',
+                    title='second',
+                ),
+            ]
+
+            assert bot.answer_inline_query(chat_id, results=results)
+
+        finally:
+            bot.arbitrary_callback_data = False
+            bot.callback_data_cache.clear_callback_data()
+            bot.callback_data_cache.clear_callback_queries()
+
+    def test_get_chat_arbitrary_callback_data(self, super_group_id, bot):
+        try:
+            bot.arbitrary_callback_data = True
+            reply_markup = InlineKeyboardMarkup.from_button(
+                InlineKeyboardButton(text='text', callback_data='callback_data')
+            )
+
+            message = bot.send_message(
+                super_group_id, text='get_chat_arbitrary_callback_data', reply_markup=reply_markup
+            )
+            message.pin()
+
+            keyboard = list(bot.callback_data_cache._keyboard_data)[0]
+            data = list(bot.callback_data_cache._keyboard_data[keyboard].button_data.values())[0]
+            assert data == 'callback_data'
+
+            chat = bot.get_chat(super_group_id)
+            assert chat.pinned_message == message
+            assert chat.pinned_message.reply_markup == reply_markup
+        finally:
+            bot.arbitrary_callback_data = False
+            bot.callback_data_cache.clear_callback_data()
+            bot.callback_data_cache.clear_callback_queries()
+            bot.unpin_all_chat_messages(super_group_id)
+
+    # In the following tests we check that get_updates inserts callback data correctly if necessary
+    # The same must be done in the webhook updater. This is tested over at test_updater.py, but
+    # here we test more extensively.
+
+    @pytest.mark.parametrize(
+        'message_type', ['channel_post', 'edited_channel_post', 'message', 'edited_message']
+    )
+    def test_arbitrary_callback_data_pinned_message_reply_to_message(
+        self, super_group_id, bot, monkeypatch, message_type
+    ):
+        bot.arbitrary_callback_data = True
+        reply_markup = InlineKeyboardMarkup.from_button(
+            InlineKeyboardButton(text='text', callback_data='callback_data')
+        )
+
+        message = Message(
+            1, None, None, reply_markup=bot.callback_data_cache.process_keyboard(reply_markup)
+        )
+        # We do to_dict -> de_json to make sure those aren't the same objects
+        message.pinned_message = Message.de_json(message.to_dict(), bot)
+
+        def post(*args, **kwargs):
+            update = Update(
+                17,
+                **{
+                    message_type: Message(
+                        1,
+                        None,
+                        None,
+                        pinned_message=message,
+                        reply_to_message=Message.de_json(message.to_dict(), bot),
+                    )
+                },
+            )
+            return [update.to_dict()]
+
+        try:
+            monkeypatch.setattr(bot.request, 'post', post)
+            bot.delete_webhook()  # make sure there is no webhook set if webhook tests failed
+            updates = bot.get_updates(timeout=1)
+
+            assert isinstance(updates, list)
+            assert len(updates) == 1
+
+            effective_message = updates[0][message_type]
+            assert (
+                effective_message.reply_to_message.reply_markup.inline_keyboard[0][0].callback_data
+                == 'callback_data'
+            )
+            assert (
+                effective_message.pinned_message.reply_markup.inline_keyboard[0][0].callback_data
+                == 'callback_data'
+            )
+
+            pinned_message = effective_message.reply_to_message.pinned_message
+            assert (
+                pinned_message.reply_markup.inline_keyboard[0][0].callback_data == 'callback_data'
+            )
+
+        finally:
+            bot.arbitrary_callback_data = False
+            bot.callback_data_cache.clear_callback_data()
+            bot.callback_data_cache.clear_callback_queries()
+
+    @pytest.mark.parametrize(
+        'message_type', ['channel_post', 'edited_channel_post', 'message', 'edited_message']
+    )
+    @pytest.mark.parametrize('self_sender', [True, False])
+    def test_arbitrary_callback_data_via_bot(
+        self, super_group_id, bot, monkeypatch, self_sender, message_type
+    ):
+        bot.arbitrary_callback_data = True
+        reply_markup = InlineKeyboardMarkup.from_button(
+            InlineKeyboardButton(text='text', callback_data='callback_data')
+        )
+
+        reply_markup = bot.callback_data_cache.process_keyboard(reply_markup)
+        message = Message(
+            1,
+            None,
+            None,
+            reply_markup=reply_markup,
+            via_bot=bot.bot if self_sender else User(1, 'first', False),
+        )
+
+        def post(*args, **kwargs):
+            return [Update(17, **{message_type: message}).to_dict()]
+
+        try:
+            monkeypatch.setattr(bot.request, 'post', post)
+            bot.delete_webhook()  # make sure there is no webhook set if webhook tests failed
+            updates = bot.get_updates(timeout=1)
+
+            assert isinstance(updates, list)
+            assert len(updates) == 1
+
+            message = updates[0][message_type]
+            if self_sender:
+                assert message.reply_markup.inline_keyboard[0][0].callback_data == 'callback_data'
+            else:
+                assert (
+                    message.reply_markup.inline_keyboard[0][0].callback_data
+                    == reply_markup.inline_keyboard[0][0].callback_data
+                )
+        finally:
+            bot.arbitrary_callback_data = False
+            bot.callback_data_cache.clear_callback_data()
+            bot.callback_data_cache.clear_callback_queries()

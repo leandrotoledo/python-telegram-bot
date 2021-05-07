@@ -18,6 +18,7 @@
 # along with this program.  If not, see [http://www.gnu.org/licenses/].
 """Extensions over the Telegram Bot API to facilitate bot making"""
 
+from .bot import Bot
 from .basepersistence import BasePersistence
 from .picklepersistence import PicklePersistence
 from .dictpersistence import DictPersistence
@@ -45,40 +46,44 @@ from .pollanswerhandler import PollAnswerHandler
 from .pollhandler import PollHandler
 from .chatmemberhandler import ChatMemberHandler
 from .defaults import Defaults
+from .callbackdatacache import CallbackDataCache, InvalidCallbackData
 
 __all__ = (
-    'Dispatcher',
-    'JobQueue',
-    'Job',
-    'Updater',
+    'BaseFilter',
+    'BasePersistence',
+    'Bot',
+    'CallbackContext',
+    'CallbackDataCache',
     'CallbackQueryHandler',
+    'ChatMemberHandler',
     'ChosenInlineResultHandler',
     'CommandHandler',
+    'ConversationHandler',
+    'Defaults',
+    'DelayQueue',
+    'DictPersistence',
+    'Dispatcher',
+    'DispatcherHandlerStop',
+    'Filters',
     'Handler',
     'InlineQueryHandler',
-    'MessageHandler',
-    'BaseFilter',
+    'InvalidCallbackData',
+    'Job',
+    'JobQueue',
     'MessageFilter',
-    'UpdateFilter',
-    'Filters',
+    'MessageHandler',
+    'MessageQueue',
+    'PicklePersistence',
+    'PollAnswerHandler',
+    'PollHandler',
+    'PreCheckoutQueryHandler',
+    'PrefixHandler',
     'RegexHandler',
+    'ShippingQueryHandler',
     'StringCommandHandler',
     'StringRegexHandler',
     'TypeHandler',
-    'ConversationHandler',
-    'PreCheckoutQueryHandler',
-    'ShippingQueryHandler',
-    'MessageQueue',
-    'DelayQueue',
-    'DispatcherHandlerStop',
+    'UpdateFilter',
+    'Updater',
     'run_async',
-    'CallbackContext',
-    'BasePersistence',
-    'PicklePersistence',
-    'DictPersistence',
-    'PrefixHandler',
-    'PollAnswerHandler',
-    'PollHandler',
-    'ChatMemberHandler',
-    'Defaults',
 )

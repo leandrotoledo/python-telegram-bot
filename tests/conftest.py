@@ -31,7 +31,6 @@ import pytest
 import pytz
 
 from telegram import (
-    Bot,
     Message,
     User,
     Chat,
@@ -45,7 +44,7 @@ from telegram import (
     File,
     ChatPermissions,
 )
-from telegram.ext import Dispatcher, JobQueue, Updater, MessageFilter, Defaults, UpdateFilter
+from telegram.ext import Dispatcher, JobQueue, Updater, MessageFilter, Defaults, UpdateFilter, Bot
 from telegram.error import BadRequest
 from telegram.utils.helpers import DefaultValue, DEFAULT_NONE
 from tests.bots import get_bot
@@ -214,6 +213,9 @@ def pytest_configure(config):
 
 
 def make_bot(bot_info, **kwargs):
+    """
+    Tests are executed on tg.ext.Bot, as that class only extends the functionality of tg.bot
+    """
     return Bot(bot_info['token'], private_key=PRIVATE_KEY, **kwargs)
 
 

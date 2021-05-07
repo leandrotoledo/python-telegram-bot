@@ -23,7 +23,7 @@ from copy import deepcopy
 from typing import Any, DefaultDict, Dict, Optional, Tuple
 
 from telegram.ext import BasePersistence
-from telegram.utils.types import ConversationDict
+from telegram.ext.utils.types import ConversationDict, CDCData
 
 
 class PicklePersistence(BasePersistence):
@@ -46,7 +46,9 @@ class PicklePersistence(BasePersistence):
         store_chat_data (:obj:`bool`, optional): Whether user_data should be saved by this
             persistence class. Default is :obj:`True`.
         store_bot_data (:obj:`bool`, optional): Whether bot_data should be saved by this
-            persistence class. Default is :obj:`True` .
+            persistence class. Default is :obj:`True`.
+        store_callback_data (:obj:`bool`, optional): Whether callback_data should be saved by this
+            persistence class. Default is :obj:`False`.
         single_file (:obj:`bool`, optional): When :obj:`False` will store 3 separate files of
             `filename_user_data`, `filename_chat_data` and `filename_conversations`. Default is
             :obj:`True`.
@@ -64,9 +66,11 @@ class PicklePersistence(BasePersistence):
             persistence class.
         store_bot_data (:obj:`bool`): Optional. Whether bot_data should be saved by this
             persistence class.
+        store_callback_data (:obj:`bool`): Optional. Whether callback_data be saved by this
+            persistence class.
         single_file (:obj:`bool`): Optional. When :obj:`False` will store 3 separate files of
-            `filename_user_data`, `filename_chat_data` and `filename_conversations`. Default is
-            :obj:`True`.
+            `filename_user_data`, `filename_chat_data`, `filename_chat_data` and
+            `filename_conversations`. Default is :obj:`True`.
         on_flush (:obj:`bool`, optional): When :obj:`True` will only save to file when
             :meth:`flush` is called and keep data in memory until that happens. When
             :obj:`False` will store data on any transaction *and* on call to :meth:`flush`.
@@ -81,11 +85,13 @@ class PicklePersistence(BasePersistence):
         store_bot_data: bool = True,
         single_file: bool = True,
         on_flush: bool = False,
+        store_callback_data: bool = False,
     ):
         super().__init__(
             store_user_data=store_user_data,
             store_chat_data=store_chat_data,
             store_bot_data=store_bot_data,
+            store_callback_data=store_callback_data,
         )
         self.filename = filename
         self.single_file = single_file
@@ -93,6 +99,7 @@ class PicklePersistence(BasePersistence):
         self.user_data: Optional[DefaultDict[int, Dict]] = None
         self.chat_data: Optional[DefaultDict[int, Dict]] = None
         self.bot_data: Optional[Dict] = None
+        self.callback_data: Optional[CDCData] = None
         self.conversations: Optional[Dict[str, Dict[Tuple, object]]] = None
 
     def load_singlefile(self) -> None:
@@ -104,12 +111,14 @@ class PicklePersistence(BasePersistence):
                 self.chat_data = defaultdict(dict, data['chat_data'])
                 # For backwards compatibility with files not containing bot data
                 self.bot_data = data.get('bot_data', {})
+                self.callback_data = data.get('callback_data', {})
                 self.conversations = data['conversations']
         except OSError:
             self.conversations = {}
             self.user_data = defaultdict(dict)
             self.chat_data = defaultdict(dict)
             self.bot_data = {}
+            self.callback_data = None
         except pickle.UnpicklingError as exc:
             raise TypeError(f"File {filename} does not contain valid pickle data") from exc
         except Exception as exc:
@@ -134,12 +143,14 @@ class PicklePersistence(BasePersistence):
                 'user_data': self.user_data,
                 'chat_data': self.chat_data,
                 'bot_data': self.bot_data,
+                'callback_data': self.callback_data,
             }
             pickle.dump(data, file)
 
     @staticmethod
     def dump_file(filename: str, data: object) -> None:
         with open(filename, "wb") as file:
+            print('dumping', filename)
             pickle.dump(data, file)
 
     def get_user_data(self) -> DefaultDict[int, Dict[object, object]]:
@@ -199,6 +210,26 @@ class PicklePersistence(BasePersistence):
         else:
             self.load_singlefile()
         return deepcopy(self.bot_data)  # type: ignore[arg-type]
+
+    def get_callback_data(self) -> Optional[CDCData]:
+        """Returns the callback data from the pickle file if it exists or :obj:`None`.
+
+        Returns:
+            Optional[:class:`telegram.utils.types.CDCData`:]: The restored meta data as three-tuple
+                of :obj:`int`, dictionary and :class:`collections.deque` or :obj:`None`, if no data
+                was stored.
+        """
+        if self.callback_data:
+            pass
+        elif not self.single_file:
+            filename = f"{self.filename}_callback_data"
+            data = self.load_file(filename)
+            if not data:
+                data = None
+            self.callback_data = data
+        else:
+            self.load_singlefile()
+        return deepcopy(self.callback_data)
 
     def get_conversations(self, name: str) -> ConversationDict:
         """Returns the conversations from the pickle file if it exsists or an empty dict.
@@ -298,10 +329,34 @@ class PicklePersistence(BasePersistence):
             else:
                 self.dump_singlefile()
 
+    def update_callback_data(self, data: CDCData) -> None:
+        """Will update the callback_data (if changed) and depending on :attr:`on_flush` save the
+        pickle file.
+
+        Args:
+            data (:class:`telegram.utils.types.CDCData`:): The relevant data to restore
+                :attr:`telegram.ext.dispatcher.bot.callback_data`.
+        """
+        if self.callback_data == data:
+            return
+        self.callback_data = (data[0].copy(), data[1].copy())
+        if not self.on_flush:
+            if not self.single_file:
+                filename = f"{self.filename}_callback_data"
+                self.dump_file(filename, self.callback_data)
+            else:
+                self.dump_singlefile()
+
     def flush(self) -> None:
         """Will save all data in memory to pickle file(s)."""
         if self.single_file:
-            if self.user_data or self.chat_data or self.bot_data or self.conversations:
+            if (
+                self.user_data
+                or self.chat_data
+                or self.bot_data
+                or self.callback_data
+                or self.conversations
+            ):
                 self.dump_singlefile()
         else:
             if self.user_data:
@@ -310,5 +365,7 @@ class PicklePersistence(BasePersistence):
                 self.dump_file(f"{self.filename}_chat_data", self.chat_data)
             if self.bot_data:
                 self.dump_file(f"{self.filename}_bot_data", self.bot_data)
+            if self.callback_data:
+                self.dump_file(f"{self.filename}_callback_data", self.callback_data)
             if self.conversations:
                 self.dump_file(f"{self.filename}_conversations", self.conversations)
